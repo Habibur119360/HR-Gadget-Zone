@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login / Register - HR Gadget Zone</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .auth-container {
+            max-width: 400px;
+            margin: 4rem auto;
+            padding: 2rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+
+        .auth-toggle {
+            display: flex;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .auth-toggle button {
+            flex: 1;
+            padding: 0.75rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .auth-toggle button.active {
+            color: var(--primary);
+            border-bottom: 2px solid var(--primary);
+        }
+    </style>
+</head>
+
+<body>
+    <header id="main-header"></header>
+
+    <main class="container">
+        <div class="auth-container">
+            <div class="auth-toggle">
+                <button id="tab-login" class="active" onclick="switchTab('login')">Login</button>
+                <button id="tab-register" onclick="switchTab('register')">Register</button>
+            </div>
+
+            <form id="auth-form">
+                <div class="form-group" id="name-group" style="display: none;">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" name="name" class="form-control" placeholder="Full Name">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" id="lbl-identifier">Email Address</label>
+                    <input type="text" name="email" class="form-control" required placeholder="name@example.com">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" name="password" class="form-control" required placeholder="******">
+                    <div style="text-align: right; margin-top: 0.5rem;">
+                        <a href="#" onclick="showForgotModal()" style="color: var(--primary); font-size: 0.9rem;">Forgot
+                            Password?</a>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Login</button>
+            </form>
+        </div>
+
+        <!-- Forgot Password Modal Wizard -->
+        <div id="forgot-modal" class="hidden"
+            style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+            <div class="card" style="width: 100%; max-width: 400px;">
+                <h3 class="mb-2" id="fp-title">Reset Password</h3>
+
+                <!-- Step 0: Identifier & Method Selection -->
+                <form id="fp-step-0">
+                    <div class="form-group">
+                        <label class="form-label">Enter Email or Phone</label>
+                        <input type="text" id="fp-identifier" class="form-control" required
+                            placeholder="Email or Phone">
+                    </div>
+
+                    <div id="fp-method-group" class="hidden"
+                        style="margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 1rem;">
+                        <p class="mb-2" style="font-size: 0.95rem;">Select where to send the code:</p>
+                        <div class="flex gap-2">
+                            <button type="button" onclick="selectFpMethod('email')" class="btn btn-outline"
+                                id="btn-method-email" style="flex:1;">
+                                Email
+                            </button>
+                            <button type="button" onclick="selectFpMethod('sms')" class="btn btn-outline"
+                                id="btn-method-sms" style="flex:1;">
+                                SMS
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between mt-2">
+                        <button type="button" onclick="closeForgotModal()" class="btn btn-outline">Cancel</button>
+                        <div id="fp-step-0-action">
+                            <button type="submit" class="btn btn-primary">Next</button>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Step 2: Verify Code -->
+                <form id="fp-step-2" class="hidden">
+                    <div class="form-group">
+                        <label class="form-label">Enter Verification Code</label>
+                        <p class="text-muted" style="font-size: 0.9rem; margin-bottom: 0.5rem;">Code sent via <span
+                                id="fp-sent-via" style="font-weight: bold;"></span> to <span id="fp-sent-to"
+                                style="font-weight: bold;"></span></p>
+                        <input type="text" id="fp-code" class="form-control" required placeholder="123456"
+                            maxlength="6">
+                    </div>
+                    <div class="flex justify-between mt-2">
+                        <button type="button" onclick="closeForgotModal()" class="btn btn-outline">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Verify</button>
+                    </div>
+                </form>
+
+                <!-- Step 3: New Password -->
+                <form id="fp-step-3" class="hidden">
+                    <div class="form-group">
+                        <label class="form-label">New Password</label>
+                        <input type="password" id="fp-new-pass" class="form-control" required placeholder="******">
+                    </div>
+                    <div class="flex justify-between mt-2">
+                        <button type="button" onclick="closeForgotModal()" class="btn btn-outline">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Set Password</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/data.js"></script>
+    <script src="js/main.js"></script>
+    <script>
+        let isLogin = true;
+
+        function switchTab(mode) {
+            isLogin = mode === 'login';
+
+            document.getElementById('tab-login').classList.toggle('active', isLogin);
+            document.getElementById('tab-register').classList.toggle('active', !isLogin);
+
+            document.getElementById('name-group').style.display = isLogin ? 'none' : 'block';
+            document.getElementById('lbl-identifier').textContent = isLogin ? 'Email or Phone' : 'Email Address';
+
+            // For register, we strictly want Email as the primary ID, Phone is optional in profile later
+            const emailInput = document.querySelector('input[name="email"]');
+            emailInput.placeholder = isLogin ? 'name@example.com or 017xxxxxxxx' : 'name@example.com';
+
+            document.querySelector('#auth-form button[type="submit"]').textContent = isLogin ? 'Login' : 'Create Account';
+            document.querySelector('input[name="name"]').required = !isLogin;
+        }
+
+        document.getElementById('auth-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+
+            if (isLogin) {
+                // 'email' field actually holds identifier (email/phone)
+                handleLogin(data.email, data.password);
+            } else {
+                handleRegister(data.name, data.email, data.password);
+            }
+        });
+
+        function handleLogin(identifier, password) {
+            const users = db.getUsers();
+            // Check against Email OR Phone
+            const user = users.find(u => (u.email === identifier || u.phone === identifier) && u.password === password);
+
+            if (user) {
+                db.saveCurrentUser(user);
+                showToast('Login successful!');
+                window.location.href = user.role === 'admin' ? 'admin.html' : 'index.html';
+            } else {
+                alert('Invalid credentials');
+            }
+        }
+
+        function handleRegister(name, email, password) {
+            const users = db.getUsers();
+
+            if (users.some(u => u.email === email)) {
+                alert('Email already exists');
+                return;
+            }
+
+            const newUser = {
+                id: 'u_' + Date.now(),
+                name,
+                email,
+                phone: '', // Phone added via profile later
+                password,
+                role: 'user',
+                createdAt: new Date().toISOString()
+            };
+
+            users.push(newUser);
+            db.saveUsers(users);
+            db.saveCurrentUser(newUser); // Auto login
+
+            showToast('Account created!');
+            window.location.href = 'index.html';
+        }
+
+        // --- Forgot Password Wizard Logic ---
+        let fpState = {
+            identifier: '',
+            user: null,
+            method: '', // 'email' or 'sms'
+            code: '',
+            generatedCode: ''
+        };
+
+        function showForgotModal() {
+            document.getElementById('forgot-modal').classList.remove('hidden');
+            resetFpForms();
+        }
+
+        function closeForgotModal() {
+            document.getElementById('forgot-modal').classList.add('hidden');
+        }
+
+        function resetFpForms() {
+            fpState = { identifier: '', user: null, method: '', code: '', generatedCode: '' };
+            document.getElementById('fp-step-0').reset();
+            document.getElementById('fp-step-2').reset();
+            document.getElementById('fp-step-3').reset();
+
+            document.getElementById('fp-method-group').classList.add('hidden');
+            document.getElementById('fp-step-0-action').classList.remove('hidden');
+
+            // Reset Button Styles
+            document.getElementById('btn-method-email').classList.remove('active');
+            document.getElementById('btn-method-sms').classList.remove('active');
+            document.getElementById('btn-method-email').classList.add('btn-outline');
+            document.getElementById('btn-method-sms').classList.add('btn-outline');
+
+            document.getElementById('fp-step-0').classList.remove('hidden');
+            document.getElementById('fp-step-2').classList.add('hidden');
+            document.getElementById('fp-step-3').classList.add('hidden');
+            document.getElementById('fp-title').textContent = 'Reset Password';
+        }
+
+        // Step 0: Find User
+        document.getElementById('fp-step-0').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const identifier = document.getElementById('fp-identifier').value;
+            const users = db.getUsers();
+
+            // Find by Email OR Phone
+            const user = users.find(u => u.email === identifier || u.phone === identifier);
+
+            if (user) {
+                fpState.user = user;
+                fpState.identifier = identifier;
+
+                // Show Method Selection
+                document.getElementById('fp-method-group').classList.remove('hidden');
+                document.getElementById('fp-step-0-action').classList.add('hidden'); // Hide Next button, force selection
+
+                // Auto-disable if option missing
+                if (!user.phone) {
+                    const smsBtn = document.getElementById('btn-method-sms');
+                    smsBtn.disabled = true;
+                    smsBtn.title = "No phone number linked to account";
+                    smsBtn.style.opacity = "0.5";
+                }
+            } else {
+                alert('No account found with this Email or Phone.');
+            }
+        });
+
+        function selectFpMethod(method) {
+            fpState.method = method;
+
+            // Generate Code
+            fpState.generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+            // Simulation Message
+            let target = method === 'email' ? fpState.user.email : fpState.user.phone;
+            if (!target) {
+                alert('Error: Missing contact info for selected method.');
+                return;
+            }
+
+            let msg = `[SIMULATION]\n${method.toUpperCase()} sent to: ${target}\nVerification Code: ${fpState.generatedCode}`;
+
+            console.log(msg);
+            alert(msg);
+
+            // Move to Verify Step
+            document.getElementById('fp-step-0').classList.add('hidden');
+            document.getElementById('fp-step-2').classList.remove('hidden');
+
+            document.getElementById('fp-sent-via').textContent = method.toUpperCase();
+            document.getElementById('fp-sent-to').textContent = target;
+        }
+
+        // Step 2: Verify Code
+        document.getElementById('fp-step-2').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const inputCode = document.getElementById('fp-code').value;
+
+            if (inputCode === fpState.generatedCode) {
+                // Move to Step 3
+                document.getElementById('fp-step-2').classList.add('hidden');
+                document.getElementById('fp-step-3').classList.remove('hidden');
+            } else {
+                alert('Invalid code. Please try again.');
+            }
+        });
+
+        // Step 3: Set New Password
+        document.getElementById('fp-step-3').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const newPass = document.getElementById('fp-new-pass').value;
+
+            if (newPass.length < 4) {
+                alert('Password must be at least 4 characters');
+                return;
+            }
+
+            const users = db.getUsers();
+            const userIndex = users.findIndex(u => u.email === fpState.email); // Note: email might not always be the primary key if multiple users can have same email (validation prevents this) but here we should probably find by ID.
+
+            // Better to find by ID to be safe
+            const targetUserIndex = users.findIndex(u => u.id === fpState.user.id);
+
+            if (targetUserIndex !== -1) {
+                users[targetUserIndex].password = newPass;
+                db.saveUsers(users);
+                showToast('Password updated successfully! Please login.');
+                closeForgotModal();
+            } else {
+                alert('Error updating password.');
+            }
+        });
+    </script>
+</body>
+
+</html>

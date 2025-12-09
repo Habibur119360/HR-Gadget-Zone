@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clear Default Products - HR Gadget Zone</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+
+        .info {
+            background: #f0f4ff;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .info p {
+            color: #333;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .product-count {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+            margin: 20px 0;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .success {
+            background: #10b981;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🗑️ Clear Default Products</h1>
+
+        <div class="info">
+            <p><strong>Current Products in Database:</strong></p>
+            <div class="product-count" id="productCount">Loading...</div>
+        </div>
+
+        <div class="info">
+            <p>This will remove all 8 default products that are showing up in your shop.</p>
+            <p><strong>Note:</strong> This will only clear the old default products. Any products you've added through
+                the admin panel will also be removed.</p>
+        </div>
+
+        <button onclick="clearProducts()">Clear All Products</button>
+        <button onclick="location.reload()">Refresh Count</button>
+
+        <div class="success" id="successMsg">
+            ✅ Successfully cleared all products!
+        </div>
+
+        <a href="index.html" class="back-link">← Back to Home</a>
+    </div>
+
+    <script>
+        // Display current product count
+        function updateProductCount() {
+            const products = JSON.parse(localStorage.getItem('hr_gadget_products') || '[]');
+            document.getElementById('productCount').textContent = products.length + ' products';
+        }
+
+        // Clear all products
+        function clearProducts() {
+            if (confirm('Are you sure you want to clear all products? This action cannot be undone.')) {
+                localStorage.setItem('hr_gadget_products', JSON.stringify([]));
+                document.getElementById('successMsg').style.display = 'block';
+                updateProductCount();
+
+                setTimeout(() => {
+                    document.getElementById('successMsg').style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        // Initialize
+        updateProductCount();
+    </script>
+</body>
+
+</html>

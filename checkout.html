@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout - HR Gadget Zone</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script>
+        (function () {
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+</head>
+
+<body>
+    <header id="main-header"></header>
+
+    <main class="container mb-2">
+        <h1 class="text-center mt-2 mb-2">Checkout</h1>
+
+        <div class="grid grid-cols-2" style="gap: 3rem;">
+            <!-- Shipping Form -->
+            <div>
+                <h3 class="mb-2">Shipping Information</h3>
+                <form id="checkout-form">
+                    <div class="form-group">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" name="name" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Phone Number</label>
+                        <input type="tel" name="phone" class="form-control" required placeholder="Number">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Address</label>
+                        <textarea name="address" class="form-control" required rows="3"></textarea>
+                    </div>
+
+                    <h3 class="mb-2 mt-2">Payment Method</h3>
+                    <div class="form-group">
+                        <label class="form-label">Select Payment</label>
+                        <select name="payment" class="form-control" onchange="togglePaymentFields(this.value)">
+                            <option value="cod">Cash on Delivery</option>
+                            <option value="bkash">Bkash</option>
+                            <option value="nagad">Nagad</option>
+                            <option value="card">Bank Card</option>
+                        </select>
+                    </div>
+
+                    <div id="payment-fields" class="form-group hidden"
+                        style="background: var(--bg-body); padding: 1rem; border-radius: var(--radius); border: 1px solid var(--border);">
+                        <!-- Dynamic fields -->
+                    </div>
+
+                    <button type="submit" class="btn btn-primary mt-2" style="width: 100%;">Place Order</button>
+                </form>
+            </div>
+
+            <!-- Order Summary -->
+            <div class="card" style="height: fit-content;">
+                <h3>Your Order</h3>
+                <div id="order-items" style="margin: 1rem 0;">
+                    <!-- Items -->
+                </div>
+                <hr style="border: 0; border-top: 1px solid var(--border); margin: 1rem 0;">
+                <div class="flex justify-between" style="font-weight: bold; font-size: 1.2rem;">
+                    <span>Total</span>
+                    <span id="order-total">0 BDT</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/data.js"></script>
+    <script src="js/main.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const user = db.getCurrentUser();
+            if (!user) {
+                alert('Please login to checkout');
+                window.location.href = 'login.html';
+                return;
+            }
+
+            // Pre-fill fields
+            document.querySelector('[name="name"]').value = user.name || '';
+
+            renderOrderSummary();
+        });
+
+        function renderOrderSummary() {
+            const cart = JSON.parse(localStorage.getItem('hr_gadget_cart') || '[]');
+            if (cart.length === 0) {
+                window.location.href = 'shop.html';
+                return;
+            }
+
+            const container = document.getElementById('order-items');
+            const totalEl = document.getElementById('order-total');
+
+            let total = 0;
+            container.innerHTML = cart.map(item => {
+                total += item.price * item.quantity;
+                return `
+                    <div class="flex justify-between" style="margin-bottom: 0.5rem; font-size: 0.9rem;">
+                        <span>${item.name} x ${item.quantity}</span>
+                        <span>${item.price * item.quantity} BDT</span>
+                    </div>
+                `;
+            }).join('');
+
+            totalEl.textContent = `${total + 100} BDT `;
+        }
+
+        function togglePaymentFields(method) {
+            const fieldMap = {
+                'cod': '<p class="text-muted">Pay when you receive the product.</p>',
+                'bkash': `
+                    <label class="form-label">Bkash Number</label>
+                    <input type="text" class="form-control" placeholder="01xxxxxxxx">
+                    <label class="form-label" style="margin-top: 0.5rem;">Transaction ID</label>
+                    <input type="text" class="form-control" placeholder="TrxID">
+                `,
+                'nagad': `
+                    <label class="form-label">Nagad Number</label>
+                    <input type="text" class="form-control" placeholder="01xxxxxxxx">
+                `,
+                'card': `
+                    <label class="form-label">Card Number</label>
+                    <input type="text" class="form-control" placeholder="xxxx xxxx xxxx xxxx">
+                    <div class="flex gap-2" style="margin-top: 0.5rem;">
+                        <input type="text" class="form-control" placeholder="MM/YY">
+                        <input type="text" class="form-control" placeholder="CVC">
+                    </div>
+                `
+            };
+
+            const container = document.getElementById('payment-fields');
+            container.innerHTML = fieldMap[method];
+            container.classList.remove('hidden');
+        }
+
+        document.getElementById('checkout-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+            const user = db.getCurrentUser();
+            const cart = JSON.parse(localStorage.getItem('hr_gadget_cart') || '[]');
+            const total = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0) + 100;
+
+            const order = {
+                id: 'ord_' + Date.now(),
+                userId: user.id,
+                items: cart,
+                total: total,
+                shipping: {
+                    name: data.name,
+                    phone: data.phone,
+                    address: data.address
+                },
+                paymentMethod: data.payment,
+                status: 'Pending',
+                date: new Date().toISOString()
+            };
+
+            // Save order
+            const orders = db.getOrders();
+            orders.unshift(order); // Add to top
+            db.saveOrders(orders);
+
+            // Clear cart
+            localStorage.removeItem('hr_gadget_cart');
+
+            alert('Order Placed Successfully!');
+            window.location.href = 'profile.html';
+        });
+    </script>
+</body>
+
+</html>

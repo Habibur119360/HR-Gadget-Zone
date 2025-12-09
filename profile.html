@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - HR Gadget Zone</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script>
+        (function () {
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+</head>
+
+<body>
+    <header id="main-header"></header>
+
+    <main class="container mb-2">
+        <h1 class="text-center mt-2 mb-2">My Profile</h1>
+
+        <div class="card mb-2">
+            <div class="flex justify-between items-center">
+                <h3>Account Details</h3>
+                <div class="flex gap-2">
+                    <button onclick="openUpdateInfoModal()" class="btn btn-outline" style="padding: 0.4rem 1rem;">Update
+                        Info</button>
+                    <button onclick="openChangePassModal()" class="btn btn-primary" style="padding: 0.4rem 1rem;">Change
+                        Password</button>
+                </div>
+            </div>
+            <p class="text-muted" id="user-email">Loading...</p>
+        </div>
+
+        <!-- Admin Shop Settings (Hidden for non-admins) -->
+        <div id="admin-settings" class="card mb-2 hidden">
+            <h3 class="mb-2" style="border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">Shop Settings
+                (Admin Only)</h3>
+            <form id="shop-settings-form">
+                <div class="form-group">
+                    <label class="form-label">Shop Name</label>
+                    <input type="text" name="shopName" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Shop Email</label>
+                    <input type="email" name="shopEmail" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Shop Phone</label>
+                    <input type="tel" name="shopPhone" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Shop Address</label>
+                    <textarea name="shopAddress" class="form-control" rows="3" required></textarea>
+                </div>
+                <div class="text-right mt-2">
+                    <button type="submit" class="btn btn-primary">Update Shop Details</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Update Info Modal -->
+        <div id="update-info-modal" class="hidden"
+            style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+            <div class="card" style="width: 100%; max-width: 400px;">
+                <h3 class="mb-2">Update Contact Info</h3>
+                <form id="update-info-form">
+                    <div class="form-group">
+                        <label class="form-label">Name</label>
+                        <input type="text" name="name" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" name="email" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Phone Number</label>
+                        <input type="tel" name="phone" class="form-control" placeholder="017xxxxxxxx">
+                    </div>
+                    <div style="border-top: 1px solid var(--border); margin: 1rem 0; padding-top: 1rem;">
+                        <div class="form-group">
+                            <label class="form-label" style="color: var(--primary);">Current Password (Required to
+                                save)</label>
+                            <input type="password" name="current_password" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="flex justify-between mt-2">
+                        <button type="button" onclick="closeUpdateInfoModal()" class="btn btn-outline">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Change Password Modal -->
+        <div id="change-pass-modal" class="hidden"
+            style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+            <div class="card" style="width: 100%; max-width: 400px;">
+                <h3 class="mb-2">Change Password</h3>
+                <form id="change-pass-form">
+                    <div class="form-group">
+                        <label class="form-label">Old Password</label>
+                        <input type="password" name="old_password" class="form-control" required>
+                    </div>
+                    <div style="border-top: 1px solid var(--border); margin: 1rem 0; padding-top: 1rem;">
+                        <div class="form-group">
+                            <label class="form-label">New Password</label>
+                            <input type="password" name="new_password" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Confirm New Password</label>
+                            <input type="password" name="confirm_new_password" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="flex justify-between mt-2">
+                        <button type="button" onclick="closeChangePassModal()" class="btn btn-outline">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Update Password</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <h2 class="mb-2">Order History</h2>
+        <div id="order-list" class="grid grid-cols-1" style="gap: 1.5rem;">
+            <!-- Orders injected here -->
+        </div>
+    </main>
+
+    <script src="js/data.js"></script>
+    <script src="js/main.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const user = db.getCurrentUser();
+            if (!user) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            updateProfileHeader(user);
+            renderOrders(user.id);
+
+            // Check if Admin
+            if (user.role === 'admin') {
+                renderAdminSettings();
+            }
+        });
+
+        function renderAdminSettings() {
+            const settingsDiv = document.getElementById('admin-settings');
+            settingsDiv.classList.remove('hidden');
+
+            const contactInfo = db.getContactInfo();
+            const form = document.getElementById('shop-settings-form');
+
+            form.shopName.value = contactInfo.shopName;
+            form.shopEmail.value = contactInfo.email;
+            form.shopPhone.value = contactInfo.phone;
+            form.shopAddress.value = contactInfo.address;
+
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const newInfo = {
+                    shopName: form.shopName.value,
+                    email: form.shopEmail.value,
+                    phone: form.shopPhone.value,
+                    address: form.shopAddress.value
+                };
+
+                db.saveContactInfo(newInfo);
+                showToast('Shop Details Updated Successfully!');
+            });
+        }
+
+        function updateProfileHeader(user) {
+            document.getElementById('user-email').innerHTML = `
+                <strong>Name:</strong> ${user.name}<br>
+                <strong>Email:</strong> ${user.email}<br>
+                <strong>Phone:</strong> ${user.phone || 'Not set'}
+            `;
+        }
+
+        function renderOrders(userId) {
+            const allOrders = db.getOrders();
+            const userOrders = allOrders.filter(o => o.userId === userId);
+
+            const container = document.getElementById('order-list');
+
+            if (userOrders.length === 0) {
+                container.innerHTML = '<p class="text-center text-muted">No orders yet.</p>';
+                return;
+            }
+
+            container.innerHTML = userOrders.map(order => {
+                const date = new Date(order.date).toLocaleDateString();
+                const statusColor = getStatusColor(order.status);
+
+                return `
+                    <div class="card">
+                        <div class="flex justify-between items-center" style="border-bottom: 1px solid var(--border); padding-bottom: 1rem; margin-bottom: 1rem;">
+                            <div>
+                                <span style="font-weight: bold;">Order #${order.id}</span>
+                                <span class="text-muted" style="font-size: 0.9rem; margin-left: 1rem;">${date}</span>
+                            </div>
+                            <span class="badge" style="background-color: ${statusColor}; position: static;">${order.status}</span>
+                        </div>
+                        
+                        <div style="margin-bottom: 1rem;">
+                            ${order.items.map(item => `
+                                <div class="flex justify-between" style="font-size: 0.95rem; margin-bottom: 0.5rem;">
+                                    <span>${item.name} x ${item.quantity}</span>
+                                    <span>${item.price * item.quantity} BDT</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                        
+                        <div class="flex justify-between" style="font-weight: bold; border-top: 1px solid var(--border); padding-top: 1rem;">
+                            <span>Total</span>
+                            <span>${order.total} BDT</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getStatusColor(status) {
+            switch (status) {
+                case 'Pending': return '#f59e0b'; // Orange
+                case 'Processing': return '#3b82f6'; // Blue
+                case 'Shipped': return '#8b5cf6'; // Purple
+                case 'Delivered': return '#10b981'; // Green
+                case 'Cancelled': return '#ef4444'; // Red
+                default: return '#6b7280';
+            }
+        }
+
+        // --- UPDATE CONTACT INFO Logic ---
+        function openUpdateInfoModal() {
+            const user = db.getCurrentUser();
+            const form = document.getElementById('update-info-form');
+            form.name.value = user.name;
+            form.email.value = user.email;
+            form.phone.value = user.phone || '';
+            form.current_password.value = '';
+            document.getElementById('update-info-modal').classList.remove('hidden');
+        }
+
+        function closeUpdateInfoModal() {
+            document.getElementById('update-info-modal').classList.add('hidden');
+        }
+
+        document.getElementById('update-info-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const name = form.name.value;
+            const email = form.email.value;
+            const phone = form.phone.value;
+            const currentPassword = form.current_password.value;
+
+            const users = db.getUsers();
+            const currentUser = db.getCurrentUser();
+
+            // Verify Password
+            if (currentUser.password !== currentPassword) {
+                alert('Incorrect Current Password!');
+                return;
+            }
+
+            // Uniqueness Checks
+            if (email !== currentUser.email && users.some(u => u.email === email)) {
+                alert('Email already in use!');
+                return;
+            }
+            if (phone && phone !== currentUser.phone && users.some(u => u.phone === phone)) {
+                alert('Phone number already in use!');
+                return;
+            }
+
+            // Save
+            const userIndex = users.findIndex(u => u.id === currentUser.id);
+            if (userIndex !== -1) {
+                // Update properties
+                users[userIndex].name = name;
+                users[userIndex].email = email;
+                users[userIndex].phone = phone;
+
+                // CRITICAL: Save to LocalStorage (Permanent)
+                db.saveUsers(users);
+
+                // CRITICAL: Save to SessionStorage (Current Logic)
+                db.saveCurrentUser(users[userIndex]);
+
+                showToast('Info updated! Please remember your credentials.');
+                closeUpdateInfoModal();
+                updateProfileHeader(users[userIndex]);
+            } else {
+                alert('Error: User not found in database. Please relogin.');
+            }
+        });
+
+        // --- CHANGE PASSWORD Logic ---
+        function openChangePassModal() {
+            document.getElementById('change-pass-form').reset();
+            document.getElementById('change-pass-modal').classList.remove('hidden');
+        }
+
+        function closeChangePassModal() {
+            document.getElementById('change-pass-modal').classList.add('hidden');
+        }
+
+        document.getElementById('change-pass-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const oldPass = form.old_password.value;
+            const newPass = form.new_password.value;
+            const confirmPass = form.confirm_new_password.value;
+
+            // Reload users from DB to ensure we have latest data
+            const users = db.getUsers();
+            const currentUser = db.getCurrentUser();
+
+            // Find clean user object from DB
+            const dbUser = users.find(u => u.id === currentUser.id);
+
+            if (!dbUser) {
+                alert('Session expired or invalid. Please login again.');
+                return;
+            }
+
+            // Verify Old Password against DB record (most secure)
+            if (dbUser.password !== oldPass) {
+                alert('Incorrect Old Password!');
+                return;
+            }
+
+            // Validate New Password
+            if (newPass.length < 4) {
+                alert('New password must be at least 4 chars');
+                return;
+            }
+
+            if (newPass !== confirmPass) {
+                alert('New passwords do not match');
+                return;
+            }
+
+            // Save
+            const userIndex = users.findIndex(u => u.id === currentUser.id);
+            if (userIndex !== -1) {
+                users[userIndex].password = newPass;
+
+                db.saveUsers(users);
+                // Update session too
+                db.saveCurrentUser(users[userIndex]);
+
+                showToast('Password changed! Please login with new password next time.');
+                closeChangePassModal();
+            }
+        });
+    </script>
+</body>
+
+</html>

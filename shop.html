@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shop - HR Gadget Zone</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .shop-layout {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .sidebar {
+            background: var(--bg-card);
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            height: fit-content;
+        }
+
+        .filter-group {
+            margin-bottom: 2rem;
+        }
+
+        .filter-list li {
+            margin-bottom: 0.5rem;
+        }
+
+        .filter-list a {
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+
+        .filter-list a:hover,
+        .filter-list a.active {
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        @media (max-width: 768px) {
+            .shop-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+    <script>
+        (function () {
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+</head>
+
+<body>
+    <header id="main-header"></header>
+
+    <main class="container mb-2">
+        <div class="shop-layout">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div class="filter-group">
+                    <h3 style="margin-bottom: 1rem;">Search</h3>
+                    <input type="text" id="search-input" class="form-control" placeholder="Search products...">
+                </div>
+
+                <div class="filter-group">
+                    <h3 style="margin-bottom: 1rem;">Categories</h3>
+                    <ul class="filter-list" id="category-list">
+                        <li><a onclick="filterCategory('All')" class="active">All Products</a></li>
+                        <li><a onclick="filterCategory('Charger')">Chargers</a></li>
+                        <li><a onclick="filterCategory('Cover')">Covers</a></li>
+                        <li><a onclick="filterCategory('Powerbank')">Powerbanks</a></li>
+                        <li><a onclick="filterCategory('Audio')">Audio</a></li>
+                    </ul>
+                </div>
+            </aside>
+
+            <!-- Product Grid -->
+            <section>
+                <div class="flex justify-between items-center" style="margin-bottom: 1.5rem;">
+                    <h2 id="category-title">All Products</h2>
+                    <span id="product-count" class="text-muted">Showing 0 products</span>
+                </div>
+
+                <div id="product-grid" class="grid grid-cols-4">
+                    <!-- Products -->
+                </div>
+
+                <div id="no-products" class="text-center hidden" style="padding: 3rem;">
+                    <h3>No products found</h3>
+                    <p class="text-muted">Try changing your search or filter.</p>
+                </div>
+            </section>
+        </div>
+
+        <!-- Product Details Modal (Copied from Index) -->
+        <div id="product-modal" class="hidden"
+            style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 2000;">
+            <div class="card"
+                style="width: 100%; max-width: 800px; max-height: 90vh; overflow-y: auto; position: relative; background: var(--bg-card); display: flex; gap: 2rem;">
+                <button onclick="closeProductModal()"
+                    style="position: absolute; right: 1rem; top: 1rem; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text);">&times;</button>
+
+                <div style="flex: 1;">
+                    <img id="modal-img" src="" alt="Product"
+                        style="width: 100%; height: auto; object-fit: contain; border-radius: var(--radius);">
+                </div>
+
+                <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
+                    <h2 id="modal-name" style="margin-bottom: 0.5rem; font-size: 2rem;"></h2>
+                    <p id="modal-category" class="text-muted" style="margin-bottom: 1rem;"></p>
+                    <p id="modal-id" class="text-muted"
+                        style="margin-bottom: 1rem; font-size: 0.9rem; font-family: monospace;"></p>
+
+                    <h3 id="modal-price" style="font-size: 1.5rem; color: var(--primary); margin-bottom: 2rem;"></h3>
+
+                    <div class="flex gap-2">
+                        <button id="modal-add-cart" class="btn btn-outline" style="flex: 1;">Add to Cart</button>
+                        <button id="modal-buy-now" class="btn btn-primary" style="flex: 1;">Order Now</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer
+        style="background-color: var(--bg-card); padding: 2rem 0; margin-top: 4rem; text-align: center; border-top: 1px solid var(--border);">
+        <p>&copy; 2025 HR Gadget Zone. All rights reserved.</p>
+    </footer>
+
+    <!-- Firebase SDKs (CDN) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/main.js"></script>
+    <script>
+        let currentCategory = 'All';
+        let searchQuery = '';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderShop();
+
+            // Search listener
+            document.getElementById('search-input').addEventListener('input', (e) => {
+                searchQuery = e.target.value.toLowerCase();
+                renderShop();
+            });
+        });
+
+        function filterCategory(category) {
+            currentCategory = category;
+
+            // Update UI
+            document.querySelectorAll('#category-list a').forEach(el => el.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('category-title').textContent = category === 'All' ? 'All Products' : category;
+
+            renderShop();
+        }
+
+        async function renderShop() {
+            const allProducts = await db.getProducts();
+
+            const filtered = allProducts.filter(p => {
+                const matchesCategory = currentCategory === 'All' || p.category === currentCategory;
+                const matchesSearch = p.name.toLowerCase().includes(searchQuery);
+                return matchesCategory && matchesSearch;
+            });
+
+            const grid = document.getElementById('product-grid');
+            const noProducts = document.getElementById('no-products');
+            const count = document.getElementById('product-count');
+
+            count.textContent = `Showing ${filtered.length} products`;
+
+            if (filtered.length === 0) {
+                grid.innerHTML = '';
+                noProducts.classList.remove('hidden');
+            } else {
+                noProducts.classList.add('hidden');
+                grid.innerHTML = filtered.map(product => `
+                    <div class="card product-card" onclick="openProductModal('${product.id}')" style="cursor: pointer; transition: transform 0.2s;">
+                        <img src="${product.image}" alt="${product.name}" style="width: 100%; height: 200px; object-fit: cover; border-radius: var(--radius);">
+                        <div style="margin-top: 1rem;">
+                            <h4 style="font-size: 1.1rem; margin-bottom: 0.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${product.name}</h4>
+                            <p class="text-muted" style="font-size: 0.9rem;">${product.category}</p>
+                            <div class="flex justify-between items-center" style="margin-top: 1rem;">
+                                <span style="font-weight: bold; color: var(--primary);">${product.price} BDT</span>
+                                <button onclick="event.stopPropagation(); addToCart('${product.id}')" class="btn btn-outline" style="padding: 0.5rem; z-index: 2;">Add</button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        async function openProductModal(productId) {
+            const products = await db.getProducts();
+            // Loose equality for safety
+            const product = products.find(p => p.id == productId);
+            if (!product) return;
+
+            // Generate 5-digit code from product ID
+            const productCode = String(product.id).slice(-5).padStart(5, '0');
+
+            document.getElementById('modal-img').src = product.image;
+            document.getElementById('modal-name').textContent = product.name;
+            document.getElementById('modal-category').textContent = product.category;
+            document.getElementById('modal-id').textContent = `Code: ${productCode}`;
+            document.getElementById('modal-price').textContent = `${product.price} BDT`;
+
+            // Set up buttons
+            const addCartBtn = document.getElementById('modal-add-cart');
+            addCartBtn.onclick = () => {
+                addToCart(product.id);
+                closeProductModal();
+            };
+
+            const buyNowBtn = document.getElementById('modal-buy-now');
+            buyNowBtn.onclick = () => {
+                addToCart(product.id);
+                window.location.href = 'checkout.html';
+            };
+
+            const modal = document.getElementById('product-modal');
+            modal.classList.remove('hidden');
+
+            // Close when clicking outside
+            modal.onclick = (e) => {
+                if (e.target === modal) closeProductModal();
+            };
+        }
+
+        function closeProductModal() {
+            document.getElementById('product-modal').classList.add('hidden');
+        }
+
+        async function addToCart(productId) {
+            const products = await db.getProducts();
+            const product = products.find(p => p.id == productId);
+            if (!product) return;
+
+            // Get existing cart
+            let cart = JSON.parse(localStorage.getItem('hr_gadget_cart') || '[]');
+            const existingItem = cart.find(item => item.id == productId);
+
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                cart.push({ ...product, quantity: 1 });
+            }
+
+            localStorage.setItem('hr_gadget_cart', JSON.stringify(cart));
+            updateCartBadge();
+            showToast('Added to cart!');
+        }
+    </script>
+</body>
+
+</html>

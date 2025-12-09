@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - HR Gadget Zone</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .admin-layout {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .admin-sidebar {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1rem;
+            height: fit-content;
+        }
+
+        .admin-nav button {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 0.75rem 1rem;
+            border: none;
+            background: none;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-weight: 500;
+            border-radius: var(--radius);
+            margin-bottom: 0.5rem;
+        }
+
+        .admin-nav button:hover,
+        .admin-nav button.active {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        .table th,
+        .table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .table th {
+            background-color: var(--bg-body);
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+    <header id="main-header"></header>
+
+    <main class="container mb-2">
+        <div class="admin-layout">
+            <aside class="admin-sidebar">
+                <nav class="admin-nav">
+                    <button class="active" onclick="showTab('dashboard')">Dashboard</button>
+                    <button onclick="showTab('products')">Products</button>
+                    <button onclick="showTab('orders')">Orders</button>
+                    <button onclick="showTab('users')">Users</button>
+                </nav>
+            </aside>
+
+            <section id="admin-content">
+                <!-- Content Injected Here -->
+            </section>
+        </div>
+    </main>
+
+    <!-- Modal for Add/Edit Product -->
+    <div id="product-modal" class="hidden"
+        style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+        <div class="card" style="width: 100%; max-width: 500px;">
+            <h2 id="modal-title" class="mb-2">Add Product</h2>
+            <form id="product-form">
+                <input type="hidden" name="id">
+                <div class="form-group">
+                    <label class="form-label">Name</label>
+                    <input type="text" name="name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Category</label>
+                    <select name="category" class="form-control">
+                        <option>Charger</option>
+                        <option>Cover</option>
+                        <option>Powerbank</option>
+                        <option>Audio</option>
+                        <option>Cable</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Product Code (Auto-generated)</label>
+                    <input type="text" name="code" class="form-control" placeholder="HR-xxxx">
+                </div>
+                <div class="grid grid-cols-2" style="gap: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label">Price</label>
+                        <input type="number" name="price" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Stock</label>
+                        <input type="number" name="stock" class="form-control" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Image (URL or Upload)</label>
+                    <input type="url" name="image" id="image-url" class="form-control" placeholder="https://..."
+                        required>
+                    <input type="file" id="image-upload" accept="image/*" class="form-control"
+                        style="margin-top: 0.5rem;" onchange="handleImageUpload(this)">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea name="description" class="form-control" rows="3"></textarea>
+                </div>
+                <div class="flex justify-between mt-2">
+                    <button type="button" onclick="closeModal()" class="btn btn-outline">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Product</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs (CDN) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/main.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const user = db.getCurrentUser();
+            if (!user || user.role !== 'admin') {
+                alert('Access Denied');
+                window.location.href = 'index.html';
+                return;
+            }
+            showTab('dashboard');
+        });
+
+        function showTab(tab) {
+            // Update Active Nav
+            document.querySelectorAll('.admin-nav button').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`.admin-nav button[onclick="showTab('${tab}')"]`).classList.add('active');
+
+            const content = document.getElementById('admin-content');
+
+            if (tab === 'dashboard') {
+                renderDashboard(content);
+            } else if (tab === 'products') {
+                renderProducts(content);
+            } else if (tab === 'orders') {
+                renderOrders(content);
+            } else if (tab === 'users') {
+                renderUsers(content);
+            }
+        }
+
+        // --- DASHBOARD ---
+        async function renderDashboard(container) {
+            container.innerHTML = '<p class="text-center">Loading...</p>';
+            const products = await db.getProducts();
+            const orders = await db.getOrders();
+            const totalSales = orders.reduce((sum, o) => sum + (o.total || 0), 0);
+
+            container.innerHTML = `
+                <div class="admin-header">
+                    <h1>Dashboard</h1>
+                </div>
+                <div class="grid grid-cols-4" style="gap: 1.5rem;">
+                    <div class="card text-center">
+                        <h3 class="text-muted">Total Sales</h3>
+                        <p style="font-size: 1.5rem; font-weight: bold; margin-top: 0.5rem;">${totalSales} BDT</p>
+                    </div>
+                    <div class="card text-center">
+                        <h3 class="text-muted">Orders</h3>
+                        <p style="font-size: 1.5rem; font-weight: bold; margin-top: 0.5rem;">${orders.length}</p>
+                    </div>
+                    <div class="card text-center">
+                        <h3 class="text-muted">Products</h3>
+                        <p style="font-size: 1.5rem; font-weight: bold; margin-top: 0.5rem;">${products.length}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- PRODUCTS ---
+        async function renderProducts(container) {
+            container.innerHTML = '<p class="text-center">Loading products...</p>';
+            const products = await db.getProducts();
+
+            container.innerHTML = `
+                <div class="admin-header">
+                    <h1>Products</h1>
+                    <button onclick="openProductModal()" class="btn btn-primary">+ Add Product</button>
+                </div>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Image</th>
+                            <th>Code</th>
+                            <th>Name</th>
+                            <th>Category</th>
+                            <th>Price</th>
+                            <th>Stock</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${products.map(p => `
+                            <tr>
+                                <td><img src="${p.image}" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;"></td>
+                                <td><span class="badge" style="position:static; background:var(--bg-body); color:var(--text-main); border:1px solid var(--border);">${p.code || '-'}</span></td>
+                                <td>${p.name}</td>
+                                <td>${p.category}</td>
+                                <td>${p.price}</td>
+                                <td>${p.stock}</td>
+                                <td>
+                                    <button onclick="deleteProduct('${p.id}')" class="text-danger" style="background:none; border:none; cursor:pointer;">Delete</button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function openProductModal() {
+            document.getElementById('product-modal').classList.remove('hidden');
+
+            // Auto-generate code for new product
+            const randomCode = 'HR-' + Math.floor(1000 + Math.random() * 9000);
+            const codeInput = document.querySelector('input[name="code"]');
+            if (codeInput && !codeInput.value) {
+                codeInput.value = randomCode;
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('product-modal').classList.add('hidden');
+            document.getElementById('product-form').reset();
+            // Clear image preview if any
+            document.getElementById('image-url').type = 'url';
+        }
+
+        function handleImageUpload(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const urlInput = document.getElementById('image-url');
+                    // Base64 string
+                    urlInput.value = e.target.result;
+                    // Change type to text so validation doesn't fail on data:image URI
+                    urlInput.type = 'text';
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        document.getElementById('product-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+
+            const newProduct = {
+                name: data.name,
+                category: data.category,
+                code: data.code,
+                price: Number(data.price),
+                stock: Number(data.stock),
+                image: data.image,
+                description: data.description || ''
+            };
+
+            try {
+                await db.addProduct(newProduct);
+                closeModal();
+                await renderProducts(document.getElementById('admin-content'));
+                showToast('Product added to Firebase!');
+            } catch (error) {
+                alert('Error adding product: ' + error.message);
+            }
+        });
+
+        async function deleteProduct(id) {
+            if (!confirm('Are you sure?')) return;
+            try {
+                await db.deleteProduct(id);
+                await renderProducts(document.getElementById('admin-content'));
+                showToast('Product deleted!');
+            } catch (error) {
+                alert('Error deleting product: ' + error.message);
+            }
+        }
+
+        // --- ORDERS ---
+        async function renderOrders(container) {
+            container.innerHTML = '<p class="text-center">Loading orders...</p>';
+            const orders = await db.getOrders();
+
+            container.innerHTML = `
+                <div class="admin-header">
+                    <h1>Orders</h1>
+                </div>
+                <div class="grid" style="gap: 1.5rem;">
+                    ${orders.map(order => `
+                        <div class="card">
+                            <div class="flex justify-between items-center" style="border-bottom: 1px solid var(--border); padding-bottom: 1rem; margin-bottom: 1rem;">
+                                <div>
+                                    <h3 style="margin-bottom: 0.25rem;">Order #${order.id}</h3>
+                                    <div class="text-muted" style="font-size: 0.9rem;">${new Date(order.date).toLocaleString()}</div>
+                                </div>
+                                <div>
+                                    <select onchange="updateOrderStatus('${order.id}', this.value)" class="form-control" style="padding: 0.4rem; font-weight:bold;">
+                                        <option value="Pending" ${order.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                                        <option value="Processing" ${order.status === 'Processing' ? 'selected' : ''}>Processing</option>
+                                        <option value="Shipped" ${order.status === 'Shipped' ? 'selected' : ''}>Shipped</option>
+                                        <option value="Delivered" ${order.status === 'Delivered' ? 'selected' : ''}>Delivered</option>
+                                        <option value="Cancelled" ${order.status === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2" style="gap: 2rem; margin-bottom: 1rem;">
+                                <div>
+                                    <h4 class="mb-2" style="font-size: 1rem;">Customer Details</h4>
+                                    <p><strong>Name:</strong> ${order.shipping.name}</p>
+                                    <p><strong>Phone:</strong> ${order.shipping.phone}</p>
+                                    <p><strong>Address:</strong><br>${order.shipping.address}</p>
+                                </div>
+                                <div>
+                                    <h4 class="mb-2" style="font-size: 1rem;">Payment Info</h4>
+                                    <p><strong>Method:</strong> <span style="text-transform: capitalize;">${order.paymentMethod}</span></p>
+                                    <p><strong>Total Amount:</strong> <span style="color: var(--primary); font-weight: bold;">${order.total} BDT</span></p>
+                                </div>
+                            </div>
+
+                            <h4 class="mb-2" style="font-size: 1rem;">Order Items</h4>
+                            <table class="table" style="font-size: 0.9rem;">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 60px;">Image</th>
+                                        <th>Product</th>
+                                        <th>Code</th>
+                                        <th>Price</th>
+                                        <th>Qty</th>
+                                        <th>Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${order.items.map(item => `
+                                        <tr>
+                                            <td><img src="${item.image}" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;"></td>
+                                            <td>${item.name}</td>
+                                            <td>${item.code || '-'}</td>
+                                            <td>${item.price}</td>
+                                            <td>${item.quantity}</td>
+                                            <td>${item.price * item.quantity}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        async function updateOrderStatus(id, status) {
+            try {
+                await db.updateOrderStatus(id, status);
+                showToast(`Order marked as ${status}`);
+            } catch (error) {
+                alert('Error updating order: ' + error.message);
+            }
+        }
+
+        // --- USERS ---
+        function renderUsers(container) {
+            const users = db.getUsers();
+            container.innerHTML = `
+                <div class="admin-header">
+                    <h1>Users</h1>
+                </div>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${users.map(u => `
+                            <tr>
+                                <td>${u.name}</td>
+                                <td>${u.email}</td>
+                                <td>${u.role}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        // Expose functions globally
+        window.updateOrderStatus = updateOrderStatus;
+        window.deleteProduct = deleteProduct;
+        window.showTab = showTab;
+        window.openProductModal = openProductModal;
+        window.closeModal = closeModal;
+    </script>
+</body>
+
+</html>

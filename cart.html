@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Cart - HR Gadget Zone</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script>
+        (function () {
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+</head>
+
+<body>
+    <header id="main-header"></header>
+
+    <main class="container mb-2">
+        <h1 class="text-center mt-2 mb-2">Shopping Cart</h1>
+
+        <div id="cart-content">
+            <!-- Cart items injected here -->
+        </div>
+    </main>
+
+    <footer
+        style="background-color: var(--bg-card); padding: 2rem 0; margin-top: 4rem; text-align: center; border-top: 1px solid var(--border);">
+        <p>&copy; 2025 HR Gadget Zone. All rights reserved.</p>
+    </footer>
+
+    <script src="js/data.js"></script>
+    <script src="js/main.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            renderCart();
+        });
+
+        function renderCart() {
+            const cart = JSON.parse(localStorage.getItem('hr_gadget_cart') || '[]');
+            const container = document.getElementById('cart-content');
+
+            if (cart.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center" style="padding: 4rem;">
+                        <h3>Your cart is empty</h3>
+                        <a href="shop.html" class="btn btn-primary mt-2">Start Shopping</a>
+                    </div>
+                `;
+                return;
+            }
+
+            const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+            let html = `
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
+                    <div class="card">
+                        ${cart.map(item => `
+                            <div class="flex justify-between items-center" style="padding: 1rem 0; border-bottom: 1px solid var(--border);">
+                                <div class="flex items-center gap-2">
+                                    <img src="${item.image}" alt="${item.name}" style="width: 60px; height: 60px; object-fit: cover; border-radius: var(--radius);">
+                                    <div>
+                                        <h4>${item.name}</h4>
+                                        <p class="text-muted">${item.price} BDT x ${item.quantity}</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span style="font-weight: bold;">${item.price * item.quantity} BDT</span>
+                                    <button onclick="removeItem('${item.id}')" class="btn btn-outline" style="color: var(--danger); border-color: var(--danger); padding: 0.2rem 0.5rem;">✕</button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <div class="card" style="height: fit-content;">
+                        <h3>Order Summary</h3>
+                        <div class="flex justify-between" style="margin: 1rem 0;">
+                            <span>Subtotal</span>
+                            <span>${total} BDT</span>
+                        </div>
+                        <div class="flex justify-between" style="margin: 1rem 0;">
+                            <span>Shipping</span>
+                            <span>100 BDT</span>
+                        </div>
+                        <hr style="border: 0; border-top: 1px solid var(--border); margin: 1rem 0;">
+                        <div class="flex justify-between" style="margin-bottom: 2rem; font-weight: bold; font-size: 1.2rem;">
+                            <span>Total</span>
+                            <span>${total + 100} BDT</span>
+                        </div>
+                        <a href="checkout.html" class="btn btn-primary" style="width: 100%; text-align: center;">Proceed to Checkout</a>
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        function removeItem(id) {
+            let cart = JSON.parse(localStorage.getItem('hr_gadget_cart') || '[]');
+            cart = cart.filter(item => item.id !== id);
+            localStorage.setItem('hr_gadget_cart', JSON.stringify(cart));
+
+            renderCart();
+            updateCartBadge();
+        }
+    </script>
+</body>
+
+</html>

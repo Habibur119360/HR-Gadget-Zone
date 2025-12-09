@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Details - HR Gadget Zone</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .product-split {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            margin-top: 3rem;
+        }
+
+        @media (max-width: 768px) {
+            .product-split {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+        }
+    </style>
+    <script>
+        (function () {
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+</head>
+
+<body>
+    <header id="main-header"></header>
+
+    <main class="container mb-2">
+        <div id="product-container">
+            <!-- Loading state -->
+            <p class="text-center mt-2">Loading...</p>
+        </div>
+    </main>
+
+    <footer
+        style="background-color: var(--bg-card); padding: 2rem 0; margin-top: 4rem; text-align: center; border-top: 1px solid var(--border);">
+        <p>&copy; 2025 HR Gadget Zone. All rights reserved.</p>
+    </footer>
+
+    <script src="js/data.js"></script>
+    <script src="js/main.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const productId = urlParams.get('id');
+
+            if (productId) {
+                loadProduct(productId);
+            } else {
+                document.getElementById('product-container').innerHTML = `
+                    <div class="text-center mt-2">
+                        <h2>Product not found</h2>
+                        <a href="shop.html" class="btn btn-primary mt-2">Back to Shop</a>
+                    </div>
+                `;
+            }
+        });
+
+        function loadProduct(id) {
+            const products = db.getProducts();
+            const product = products.find(p => p.id === id);
+
+            if (!product) {
+                document.getElementById('product-container').innerHTML = `
+                    <div class="text-center mt-2">
+                        <h2>Product not found</h2>
+                        <a href="shop.html" class="btn btn-primary mt-2">Back to Shop</a>
+                    </div>
+                `;
+                return;
+            }
+
+            document.getElementById('product-container').innerHTML = `
+                <div class="product-split">
+                    <div>
+                        <img src="${product.image}" alt="${product.name}" style="width: 100%; border-radius: var(--radius); border: 1px solid var(--border);">
+                    </div>
+                    <div>
+                        <div style="margin-bottom: 0.5rem;">
+                            <span class="badge" style="position: static; font-size: 0.8rem;">${product.category}</span>
+                            ${product.stock > 0 ? `<span class="text-success" style="margin-left: 1rem;">In Stock (${product.stock})</span>` : '<span class="text-danger" style="margin-left: 1rem;">Out of Stock</span>'}
+                        </div>
+                        
+                        <h1 style="font-size: 2.5rem; margin-bottom: 1rem;">${product.name}</h1>
+                        <h2 style="color: var(--primary); font-size: 2rem; margin-bottom: 2rem;">${product.price} BDT</h2>
+                        
+                        <p class="text-muted" style="margin-bottom: 2rem; font-size: 1.1rem;">
+                            ${product.description}
+                        </p>
+
+                        <div class="flex items-center gap-2" style="margin-bottom: 2rem;">
+                            <button onclick="changeQty(-1)" class="btn btn-outline" style="padding: 0.5rem 1rem;">-</button>
+                            <input type="number" id="qty" value="1" min="1" max="${product.stock}" style="width: 60px; text-align: center; padding: 0.5rem;" readonly>
+                            <button onclick="changeQty(1)" class="btn btn-outline" style="padding: 0.5rem 1rem;">+</button>
+                        </div>
+
+                        <button onclick="addToCart('${product.id}')" class="btn btn-primary" style="width: 100%;">Add to Cart</button>
+                    </div>
+                </div>
+            `;
+
+            // Set page title
+            document.title = `${product.name} - HR Gadget Zone`;
+        }
+
+        function changeQty(delta) {
+            const input = document.getElementById('qty');
+            let val = parseInt(input.value) + delta;
+            if (val < 1) val = 1;
+            // Add max stock check if needed
+            input.value = val;
+        }
+
+        function addToCart(productId) {
+            const products = db.getProducts();
+            const product = products.find(p => p.id === productId);
+            const qty = parseInt(document.getElementById('qty').value);
+
+            let cart = JSON.parse(localStorage.getItem('hr_gadget_cart') || '[]');
+            const existingItem = cart.find(item => item.id === productId);
+
+            if (existingItem) {
+                existingItem.quantity += qty;
+            } else {
+                cart.push({ ...product, quantity: qty });
+            }
+
+            localStorage.setItem('hr_gadget_cart', JSON.stringify(cart));
+            updateCartBadge();
+            showToast(`Added ${qty} item(s) to cart!`);
+        }
+    </script>
+</body>
+
+</html>
