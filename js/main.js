@@ -1,7 +1,4 @@
-/**
- * HR Gadget Zone - Main Application Logic
- * Depends on: js/data.js
- */
+
 
 document.addEventListener('DOMContentLoaded', () => {
     initApp();
@@ -14,9 +11,7 @@ function initApp() {
     setupPageTransitions();
 }
 
-/**
- * Handles smooth exit animations for internal links
- */
+
 function setupPageTransitions() {
     document.addEventListener('click', (e) => {
         const link = e.target.closest('a');
@@ -25,11 +20,7 @@ function setupPageTransitions() {
         // Use href directly from attribute to check for internal/external
         const href = link.getAttribute('href');
 
-        // Ignore:
-        // 1. External links (http/https not matching origin) - handled by simple check
-        // 2. Hash links (#)
-        // 3. New tab targets
-        // 4. JavaScript handlers (href="javascript:...")
+        
 
         if (!href || href.startsWith('#') || href.startsWith('javascript:') || link.target === '_blank') return;
 
@@ -46,8 +37,7 @@ function setupPageTransitions() {
         }
     });
 
-    // Also handle Back/Forward buttons if possible? 
-    // Hard to animate generic back/forward without SPA, but this covers clicks.
+    
 }
 
 /**
@@ -173,3 +163,4 @@ function showToast(message, type = 'success') {
 window.handleLogout = handleLogout;
 window.updateCartBadge = updateCartBadge;
 window.showToast = showToast;
+
